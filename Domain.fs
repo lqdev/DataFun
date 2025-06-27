@@ -6,15 +6,10 @@ module Domain
 
     // Domain types
     type BaseNode = {
-        [<VectorStoreKey>]
         Id: string
-        [<VectorStoreData>]
         Text: string
-        Metadata: Map<string, obj>
-
-        [<VectorStoreVector(1536)>]    
+        Metadata: Map<string, obj>  
         Embedding: ReadOnlyMemory<float32> option
-
         Relationships: Map<string, string>
     }
 
@@ -28,10 +23,17 @@ module Domain
     type Transformation = BaseNode list -> Async<BaseNode list>
 
     // Vector record for Microsoft.Extensions.AI.VectorData
+    [<CLIMutable>]
     type VectorRecord = {
+        [<VectorStoreKey>]
         Id: string
+        
+        [<VectorStoreData>]
         Text: string
+        
         Metadata: Map<string, obj>
+        
+        [<VectorStoreVector(384)>]
         Vector: ReadOnlyMemory<float32>
     }
 

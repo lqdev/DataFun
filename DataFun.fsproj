@@ -21,5 +21,6 @@
     <PackageReference Include="OllamaSharp" Version="5.2.3" />
     <PackageReference Include="Microsoft.ML.Tokenizers" Version="2.0.0-preview.1.25127.4" />
     <PackageReference Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" Version="2.0.0-preview.1.25127.4" />    
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.SqliteVec" Version="1.58.0-preview" />    
   </ItemGroup>
 </Project>
