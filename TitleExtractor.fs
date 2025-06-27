@@ -15,6 +15,7 @@ module TitleExtractor
         let groupNodes nodes =
             nodes |> List.chunkBySize config.NodesPerTitle
         
+
         let extractContextFromGroup (nodeGroup: BaseNode list) =
             nodeGroup
             |> List.map (fun node -> node.Text)

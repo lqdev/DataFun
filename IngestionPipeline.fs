@@ -48,6 +48,7 @@ module IngestionPipeline
         match vectorStore with
         | None -> fun nodes -> async { return nodes }
         | Some store ->
+            // Ensure the vector store is initialized
             fun nodes ->
                 async {
                     // Convert nodes to vector records

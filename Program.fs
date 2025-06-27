@@ -3,11 +3,13 @@ open System
 open Domain
 open System.IO
 open Microsoft.Extensions.AI
+open Microsoft.Extensions.VectorData
 open IngestionPipeline
 open SentenceSplitter
 open Tokenizers
 open TitleExtractor
 open EmbeddingTransformation
+open Microsoft.SemanticKernel.Connectors.SqliteVec
 
 let createPipeline (chatClient: IChatClient) (embeddingGenerator: IEmbeddingGenerator<string, Embedding<float32>>) =
 
@@ -20,15 +22,22 @@ let createPipeline (chatClient: IChatClient) (embeddingGenerator: IEmbeddingGene
     
     let titleExtractor = createTitleExtractor {
         ChatClient = chatClient
-        NodesPerTitle = 5
+        NodesPerTitle = 2
         TitlePrompt = "Context: {context_str}. Give a title that summarizes the content: "
     }
     
     let embeddingTransform = createEmbeddingTransformation embeddingGenerator
     
+    let sqliteOptions = SqliteCollectionOptions()
+    sqliteOptions.EmbeddingGenerator <- embeddingGenerator
+
+    let (vectorStore:VectorStoreCollection<string,VectorRecord> option) = Some (new SqliteCollection<string,VectorRecord>("Data Source=documents.db", "documents", sqliteOptions))
+    vectorStore
+    |> Option.iter (fun vs -> vs.EnsureCollectionExistsAsync() |> ignore)
+
     {
         Transformations = [sentenceSplitter; titleExtractor; embeddingTransform]
-        VectorStore = None // Optionally set a vector store here
+        VectorStore = vectorStore
         EmbeddingGenerator = Some embeddingGenerator
     }
 
@@ -39,11 +48,14 @@ let runPipeline documents chatClient embeddingGenerator =
         let parallelOpts = Some { NumWorkers = 4 }
         
         let! result = IngestionPipeline.run config parallelOpts documents
-        return result
+        // return result
+
+        let save = IngestionPipeline.withVectorStore config.VectorStore
+        return! save result
     }
 
 
-let (chatClient:IChatClient) = new OllamaApiClient("http://localhost:11434", "smollm2:135m")
+let (chatClient:IChatClient) = new OllamaApiClient("http://localhost:11434", "gemma3n")
 let (embeddingGenerator:IEmbeddingGenerator<string,Embedding<float32>>) = new OllamaApiClient("http://localhost:11434", "all-minilm")
 
 // let pipeline = IngestionPipeline.createPipeline chatClient embeddingGenerator
@@ -75,3 +87,13 @@ printfn "Pipeline completed with %d nodes." (List.length result)
 //     printfn "Node Text: %s" node.Text
 //     printfn "Node Metadata: %A" node.Metadata
 // )
+
+// Save results to a file txt
+let outputFile = "output.txt"
+let outputContent = 
+    result 
+    |> List.map (fun node -> sprintf "Node ID: %s\nNode Text: %s\nNode Metadata: %A\nNode Embedding: %A\n" node.Id node.Text node.Metadata node.Embedding)
+    |> String.concat "\n"
+
+File.WriteAllText(outputFile, outputContent)
+printfn "Results saved to %s" outputFile
